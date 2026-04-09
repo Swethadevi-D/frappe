@@ -26,12 +26,13 @@
         <div class="flex" style="gap:16px; align-items: center;">
             <div class="desktop-notifications">
                 <div class="dropdown dropdown-notifications">
-                    <button class="btn-reset nav-link text-muted" data-toggle="dropdown" aria-label="{{ _("Notifications") }}" aria-haspopup="true">
+                    <button class="btn-reset nav-link text-muted notification-bell-btn" data-toggle="dropdown" aria-label="{{ _("Notifications") }}" aria-haspopup="true" style="position: relative;">
                         <svg
                             class="icon icon-md" aria-hidden="true"
                         >
                             <use href="#icon-bell"></use>
                         </svg>
+                        <span class="notification-count-badge"></span>
                     </button>
                     <div
                         style="top: unset"

@@ -42,6 +42,41 @@
 
 .notifications-unseen {
 	display: none;
+	position: relative;
+}
+
+.notification-count-badge {
+	display: none;
+	position: absolute;
+	top: -6px;
+	right: -8px;
+	background: var(--red-500);
+	color: white;
+	border-radius: 9px;
+	font-size: 9px;
+	font-weight: var(--weight-semibold);
+	min-width: 15px;
+	height: 15px;
+	line-height: 15px;
+	text-align: center;
+	padding: 0 3px;
+	pointer-events: none;
+}
+
+// Badge positioning for sidebar bell icon
+.sidebar-notification .sidebar-item-icon {
+	position: relative;
+	overflow: visible;
+
+	.notification-count-badge {
+		top: 1px;
+		right: -2px;
+	}
+}
+
+.sidebar-notification .standard-sidebar-item,
+.sidebar-notification .item-anchor {
+	overflow: visible;
 }
 
 .mark-read {

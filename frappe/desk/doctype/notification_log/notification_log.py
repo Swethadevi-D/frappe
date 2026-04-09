@@ -179,7 +179,9 @@ def get_notification_logs(limit: int = 20):
 	for user in users:
 		frappe.utils.add_user_info(user, user_info)
 
-	return {"notification_logs": notification_logs, "user_info": user_info}
+	unread_count = frappe.db.count("Notification Log", filters={"read": 0, "for_user": frappe.session.user})
+
+	return {"notification_logs": notification_logs, "user_info": user_info, "unread_count": unread_count}
 
 
 @frappe.whitelist()
