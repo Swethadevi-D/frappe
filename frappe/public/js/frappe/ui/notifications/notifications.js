@@ -404,7 +404,7 @@ class NotificationsView extends BaseNotificationsView {
 	update_count_badge(count) {
 		if (!this.count_badge) return;
 		if (count > 0) {
-			this.count_badge.text(count > 99 ? "99+" : count).show();
+			this.count_badge.text(count > 99 ? "99+" : count).css("display", "block");
 		} else {
 			this.count_badge.hide().text("");
 		}
