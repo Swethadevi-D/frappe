@@ -127,6 +127,7 @@ frappe.ui.Notifications = class Notifications {
 	mark_all_as_read(e) {
 		e.stopImmediatePropagation();
 		this.dropdown_list.find(".unread").removeClass("unread");
+		this.dropdown.find(".notification-count-badge").hide().text("");
 		frappe.call("frappe.desk.doctype.notification_log.notification_log.mark_all_as_read");
 	}
 
@@ -222,6 +223,14 @@ class NotificationsView extends BaseNotificationsView {
 			.attr("title", __("Notifications"))
 			.tooltip({ delay: { show: 600, hide: 100 }, trigger: "hover" });
 
+		// Add count badge to the sidebar bell icon (if sidebar layout)
+		let sidebar_icon = $(".sidebar-notification .sidebar-item-icon");
+		if (sidebar_icon.length && !sidebar_icon.find(".notification-count-badge").length) {
+			sidebar_icon.append('<span class="notification-count-badge"></span>');
+		}
+		// Find badge in either sidebar or desktop navbar layout
+		this.count_badge = $(".notification-count-badge");
+
 		this.setup_notification_listeners();
 
 		this.dropdown_items = [];
@@ -230,6 +239,13 @@ class NotificationsView extends BaseNotificationsView {
 		if (this.settings && this.settings.seen == 0) {
 			this.toggle_notification_icon(false);
 		}
+
+		// Fetch unread count on initial load
+		this.get_notifications_list(1).then((r) => {
+			if (r.message && r.message.unread_count) {
+				this.update_count_badge(r.message.unread_count);
+			}
+		});
 	}
 
 	update_dropdown() {
@@ -265,6 +281,7 @@ class NotificationsView extends BaseNotificationsView {
 			})
 			.then(() => {
 				$el.removeClass("unread");
+				this.decrement_count_badge();
 			});
 	}
 
@@ -384,6 +401,27 @@ class NotificationsView extends BaseNotificationsView {
 		this.notifications_icon.find(".notifications-unseen").toggle(!seen);
 	}
 
+	update_count_badge(count) {
+		if (!this.count_badge) return;
+		if (count > 0) {
+			this.count_badge.text(count > 99 ? "99+" : count).show();
+		} else {
+			this.count_badge.hide().text("");
+		}
+	}
+
+	increment_count_badge() {
+		if (!this.count_badge) return;
+		let current = parseInt(this.count_badge.text()) || 0;
+		this.update_count_badge(current + 1);
+	}
+
+	decrement_count_badge() {
+		if (!this.count_badge) return;
+		let current = parseInt(this.count_badge.text()) || 0;
+		this.update_count_badge(Math.max(0, current - 1));
+	}
+
 	toggle_seen(flag) {
 		frappe.call(
 			"frappe.desk.doctype.notification_settings.notification_settings.set_seen_value",
@@ -397,6 +435,7 @@ class NotificationsView extends BaseNotificationsView {
 	setup_notification_listeners() {
 		frappe.realtime.on("notification", () => {
 			this.toggle_notification_icon(false);
+			this.increment_count_badge();
 			this.update_dropdown();
 		});
 
@@ -420,6 +459,7 @@ class NotificationsView extends BaseNotificationsView {
 					}
 					this.render_notifications_dropdown();
 					this.notifications_fetched = true;
+					this.update_count_badge(r.message?.unread_count || 0);
 				});
 			}
 
