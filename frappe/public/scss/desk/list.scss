@@ -298,6 +298,52 @@ $level-margin-right: 8px;
 	.btn-paging {
 		background-color: var(--control-bg);
 	}
+
+	.list-pagination-controls {
+		align-items: center;
+
+		.btn-pagination {
+			background-color: var(--control-bg);
+			min-width: 28px;
+			padding: 0 var(--padding-sm);
+
+			&:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+		}
+
+		.page-indicator {
+			display: inline-flex;
+			align-items: center;
+			padding: 0 var(--padding-sm);
+			background-color: var(--control-bg);
+			border-left: 1px solid var(--border-color);
+			border-right: 1px solid var(--border-color);
+			font-size: var(--text-sm);
+			color: var(--text-color);
+			gap: 4px;
+		}
+
+		.page-input {
+			width: 48px;
+			height: 24px;
+			text-align: center;
+			padding: 0 4px;
+
+			&::-webkit-outer-spin-button,
+			&::-webkit-inner-spin-button {
+				-webkit-appearance: none;
+				margin: 0;
+			}
+			-moz-appearance: textfield;
+		}
+
+		.page-total-label {
+			white-space: nowrap;
+			color: var(--text-muted);
+		}
+	}
 }
 
 .layout-main-list {

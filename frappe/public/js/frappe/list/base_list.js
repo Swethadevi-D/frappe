@@ -47,6 +47,7 @@ frappe.views.BaseList = class BaseList {
 		this.start = 0;
 		this.page_length = frappe.is_large_screen() ? 100 : 20;
 		this.selected_page_count = this.page_length;
+		this.page_index = 0;
 		this.data = [];
 		this.method = "frappe.desk.reportview.get";
 
@@ -365,7 +366,7 @@ frappe.views.BaseList = class BaseList {
 	}
 
 	setup_paging_area() {
-		const paging_values = [20, 100, 500, 2500];
+		const paging_values = [20, 50, 100, 500, 2500];
 		this.$paging_area = $(
 			`<div class="list-paging-area level">
 				<div class="level-left">
@@ -383,9 +384,22 @@ frappe.views.BaseList = class BaseList {
 					</div>
 				</div>
 				<div class="level-right">
-					<button class="btn btn-default btn-more btn-sm">
-						${__("Load More")}
-					</button>
+					<div class="btn-group list-pagination-controls">
+						<button type="button" class="btn btn-default btn-sm btn-pagination"
+							data-action="first" title="${__("First Page")}">&laquo;</button>
+						<button type="button" class="btn btn-default btn-sm btn-pagination"
+							data-action="prev" title="${__("Previous Page")}">&lsaquo;</button>
+						<span class="page-indicator">
+							<input type="number" min="1" class="form-control input-xs page-input" value="1" aria-label="${__(
+								"Current page"
+							)}" />
+							<span class="page-total-label">/ <span class="page-total">1</span></span>
+						</span>
+						<button type="button" class="btn btn-default btn-sm btn-pagination"
+							data-action="next" title="${__("Next Page")}">&rsaquo;</button>
+						<button type="button" class="btn btn-default btn-sm btn-pagination"
+							data-action="last" title="${__("Last Page")}">&raquo;</button>
+					</div>
 				</div>
 			</div>`
 		).hide();
@@ -399,34 +413,76 @@ frappe.views.BaseList = class BaseList {
 
 		this.$paging_area.on("click", ".btn-paging", (e) => {
 			const $this = $(e.currentTarget);
-			// Set the active button
-			// This is always necessary because the current page length might
-			// have resulted from a previous "load more".
+			const new_page_length = $this.data().value;
+			if (new_page_length === this.page_length) return;
+
 			this.$paging_area.find(".btn-paging").removeClass("btn-info").prop("disabled", false);
 			$this.addClass("btn-info").prop("disabled", true);
 
-			const old_page_length = this.page_length;
-			const new_page_length = $this.data().value;
-
+			this.page_length = new_page_length;
 			this.selected_page_count = new_page_length;
-			if (this.page_length > new_page_length) {
-				this.start = 0;
-				this.page_length = new_page_length;
-			} else {
-				this.start = this.page_length;
-				this.page_length = new_page_length - this.page_length;
-			}
-
-			if (old_page_length !== new_page_length) {
-				this.refresh();
-			}
-		});
-
-		this.$paging_area.on("click", ".btn-more", (e) => {
-			this.start = this.data.length;
-			this.page_length = this.selected_page_count;
+			this.page_index = 0;
+			this.start = 0;
 			this.refresh();
 		});
+
+		this.$paging_area.on("click", ".btn-pagination", (e) => {
+			const action = $(e.currentTarget).data("action");
+			const total_pages = this.get_total_pages();
+			let target = this.page_index;
+			if (action === "first") target = 0;
+			else if (action === "prev") target = this.page_index - 1;
+			else if (action === "next") target = this.page_index + 1;
+			else if (action === "last") target = total_pages - 1;
+			this.go_to_page(target);
+		});
+
+		this.$paging_area.on("change", ".page-input", (e) => {
+			const val = parseInt($(e.currentTarget).val(), 10);
+			if (isNaN(val)) {
+				$(e.currentTarget).val(this.page_index + 1);
+				return;
+			}
+			this.go_to_page(val - 1);
+		});
+	}
+
+	go_to_page(page_index) {
+		const total_pages = this.get_total_pages();
+		const clamped = Math.max(0, Math.min(page_index, total_pages - 1));
+		if (clamped === this.page_index) {
+			this.update_pagination_ui();
+			return;
+		}
+		this.page_index = clamped;
+		this.start = clamped * this.page_length;
+		this.refresh();
+	}
+
+	get_total_pages() {
+		if (!this.page_length) return 1;
+		const count = this.total_count;
+		if (count == null || count <= 0) return 1;
+		return Math.max(1, Math.ceil(count / this.page_length));
+	}
+
+	update_pagination_ui() {
+		if (!this.$paging_area) return;
+		const total_pages = this.get_total_pages();
+		const $area = this.$paging_area;
+		const current_page = this.page_index + 1;
+
+		const $input = $area.find(".page-input");
+		$input.attr("max", total_pages);
+		if (document.activeElement !== $input[0]) {
+			$input.val(current_page);
+		}
+		$area.find(".page-total").text(total_pages);
+
+		$area.find(".btn-pagination[data-action='first'], .btn-pagination[data-action='prev']")
+			.prop("disabled", this.page_index <= 0);
+		$area.find(".btn-pagination[data-action='next'], .btn-pagination[data-action='last']")
+			.prop("disabled", this.page_index >= total_pages - 1);
 	}
 
 	set_result_height() {
@@ -533,6 +589,7 @@ frappe.views.BaseList = class BaseList {
 			this.set_result_height();
 			this.freeze(false);
 			this.reset_defaults();
+			this.update_pagination_ui();
 			if (this.settings.refresh) {
 				this.settings.refresh(this);
 			}
@@ -561,18 +618,12 @@ frappe.views.BaseList = class BaseList {
 
 		data = !Array.isArray(data) ? frappe.utils.dict(data.keys, data.values) : data;
 
-		if (this.start === 0) {
-			this.data = data;
-		} else {
-			this.data = this.data.concat(data);
-		}
-
-		this.data = this.data.uniqBy((d) => d.name);
+		this.data = data.uniqBy((d) => d.name);
 	}
 
 	reset_defaults() {
-		this.page_length = this.page_length + this.start;
-		this.start = 0;
+		// start is derived from page_index * page_length and is kept in sync by
+		// go_to_page(); nothing to reset here. Kept for subclass compatibility.
 	}
 
 	freeze() {
@@ -739,6 +790,7 @@ class FilterArea {
 	refresh_list_view() {
 		if (this.trigger_refresh) {
 			this.list_view.start = 0;
+			this.list_view.page_index = 0;
 			this.list_view.refresh();
 			this.list_view.on_filter_change();
 		}

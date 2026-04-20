@@ -1247,6 +1247,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 				this.total_count = total_count;
 				this.count_without_children =
 					count_without_children !== current_count ? count_without_children : undefined;
+				this.update_pagination_ui();
 
 				let count_str;
 				if (current_count > this.total_count) {
