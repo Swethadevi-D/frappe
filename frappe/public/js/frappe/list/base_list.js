@@ -366,58 +366,50 @@ frappe.views.BaseList = class BaseList {
 	}
 
 	setup_paging_area() {
-		const paging_values = [20, 50, 100, 500, 2500];
+		const paging_values = [10, 20, 50, 100, 200, 500, 1000, 2500];
+		const ensured_values = paging_values.includes(this.page_length)
+			? paging_values
+			: [...paging_values, this.page_length].sort((a, b) => a - b);
+
 		this.$paging_area = $(
 			`<div class="list-paging-area level">
 				<div class="level-left">
-					<div class="btn-group">
-						${paging_values
-							.map(
-								(value) => `
-							<button type="button" class="btn btn-default btn-sm btn-paging"
-								data-value="${value}">
-								${value}
-							</button>
-						`
-							)
-							.join("")}
+					<div class="page-size-selector">
+						<label class="page-size-label">${__("Rows per page")}</label>
+						<select class="form-control input-sm page-size-select" aria-label="${__(
+							"Rows per page"
+						)}">
+							${ensured_values
+								.map(
+									(v) =>
+										`<option value="${v}"${
+											v === this.page_length ? " selected" : ""
+										}>${v}</option>`
+								)
+								.join("")}
+						</select>
 					</div>
 				</div>
 				<div class="level-right">
-					<div class="btn-group list-pagination-controls">
+					<div class="list-pagination-controls">
 						<button type="button" class="btn btn-default btn-sm btn-pagination"
-							data-action="first" title="${__("First Page")}">&laquo;</button>
+							data-action="prev" title="${__("Previous Page")}" aria-label="${__(
+								"Previous Page"
+							)}">&lsaquo;</button>
+						<div class="page-numbers"></div>
 						<button type="button" class="btn btn-default btn-sm btn-pagination"
-							data-action="prev" title="${__("Previous Page")}">&lsaquo;</button>
-						<span class="page-indicator">
-							<input type="number" min="1" class="form-control input-xs page-input" value="1" aria-label="${__(
-								"Current page"
-							)}" />
-							<span class="page-total-label">/ <span class="page-total">1</span></span>
-						</span>
-						<button type="button" class="btn btn-default btn-sm btn-pagination"
-							data-action="next" title="${__("Next Page")}">&rsaquo;</button>
-						<button type="button" class="btn btn-default btn-sm btn-pagination"
-							data-action="last" title="${__("Last Page")}">&raquo;</button>
+							data-action="next" title="${__("Next Page")}" aria-label="${__(
+								"Next Page"
+							)}">&rsaquo;</button>
 					</div>
 				</div>
 			</div>`
 		).hide();
 		this.$frappe_list.append(this.$paging_area);
 
-		// set default paging btn active
-		this.$paging_area
-			.find(`.btn-paging[data-value="${this.page_length}"]`)
-			.addClass("btn-info")
-			.prop("disabled", true);
-
-		this.$paging_area.on("click", ".btn-paging", (e) => {
-			const $this = $(e.currentTarget);
-			const new_page_length = $this.data().value;
-			if (new_page_length === this.page_length) return;
-
-			this.$paging_area.find(".btn-paging").removeClass("btn-info").prop("disabled", false);
-			$this.addClass("btn-info").prop("disabled", true);
+		this.$paging_area.on("change", ".page-size-select", (e) => {
+			const new_page_length = parseInt($(e.currentTarget).val(), 10);
+			if (!new_page_length || new_page_length === this.page_length) return;
 
 			this.page_length = new_page_length;
 			this.selected_page_count = new_page_length;
@@ -428,22 +420,15 @@ frappe.views.BaseList = class BaseList {
 
 		this.$paging_area.on("click", ".btn-pagination", (e) => {
 			const action = $(e.currentTarget).data("action");
-			const total_pages = this.get_total_pages();
 			let target = this.page_index;
-			if (action === "first") target = 0;
-			else if (action === "prev") target = this.page_index - 1;
+			if (action === "prev") target = this.page_index - 1;
 			else if (action === "next") target = this.page_index + 1;
-			else if (action === "last") target = total_pages - 1;
 			this.go_to_page(target);
 		});
 
-		this.$paging_area.on("change", ".page-input", (e) => {
-			const val = parseInt($(e.currentTarget).val(), 10);
-			if (isNaN(val)) {
-				$(e.currentTarget).val(this.page_index + 1);
-				return;
-			}
-			this.go_to_page(val - 1);
+		this.$paging_area.on("click", ".btn-page-number", (e) => {
+			const page = parseInt($(e.currentTarget).data("page"), 10);
+			if (!isNaN(page)) this.go_to_page(page - 1);
 		});
 	}
 
@@ -472,17 +457,45 @@ frappe.views.BaseList = class BaseList {
 		const $area = this.$paging_area;
 		const current_page = this.page_index + 1;
 
-		const $input = $area.find(".page-input");
-		$input.attr("max", total_pages);
-		if (document.activeElement !== $input[0]) {
-			$input.val(current_page);
-		}
-		$area.find(".page-total").text(total_pages);
-
-		$area.find(".btn-pagination[data-action='first'], .btn-pagination[data-action='prev']")
+		$area.find(".btn-pagination[data-action='prev']")
 			.prop("disabled", this.page_index <= 0);
-		$area.find(".btn-pagination[data-action='next'], .btn-pagination[data-action='last']")
+		$area.find(".btn-pagination[data-action='next']")
 			.prop("disabled", this.page_index >= total_pages - 1);
+
+		const $select = $area.find(".page-size-select");
+		if ($select.length && parseInt($select.val(), 10) !== this.page_length) {
+			$select.val(this.page_length);
+		}
+
+		const tokens = this.get_visible_page_tokens(current_page, total_pages);
+		const $numbers = $area.find(".page-numbers");
+		$numbers.empty();
+		tokens.forEach((t) => {
+			if (t === "ellipsis") {
+				$numbers.append(`<span class="page-ellipsis">…</span>`);
+			} else {
+				const active = t === current_page ? " active" : "";
+				$numbers.append(
+					`<button type="button" class="btn btn-default btn-sm btn-page-number${active}" data-page="${t}" aria-current="${
+						active ? "page" : "false"
+					}">${t}</button>`
+				);
+			}
+		});
+	}
+
+	get_visible_page_tokens(current, total) {
+		if (total <= 7) {
+			return Array.from({ length: total }, (_, i) => i + 1);
+		}
+		const shown = new Set([1, total, current - 1, current, current + 1]);
+		const sorted = [...shown].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+		const tokens = [];
+		for (let i = 0; i < sorted.length; i++) {
+			if (i > 0 && sorted[i] - sorted[i - 1] > 1) tokens.push("ellipsis");
+			tokens.push(sorted[i]);
+		}
+		return tokens;
 	}
 
 	set_result_height() {
