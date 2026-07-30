@@ -158,12 +158,12 @@
 <div class="sidebar-section hidden">
 	<a><li class="indicator blue auto-repeat-status" style="display: none;"></li></a>
 </div>
-<div class="sidebar-section text-muted pt-3">
-	<ul class="list-unstyled sidebar-menu text-muted">
-		<li class="modified-by"></li>
-		<li class="created-by"></li>
-		<li class="pageview-count"></li>
-	</ul>
+<div class="sidebar-section form-audit-info border-top pt-3">
+	<div class="audit-card">
+		<div class="audit-row modified-by"></div>
+		<div class="audit-row created-by"></div>
+	</div>
+	<div class="pageview-count text-muted"></div>
 </div>
 
 {% if(frappe.get_form_sidebar_extension) { %}

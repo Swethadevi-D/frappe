@@ -2,9 +2,6 @@
 	--form-sidebar-width: 277px;
 	--form-sidebar-image-width: 80px;
 }
-.underline-hover {
-	display: initial;
-}
 // form sidebar
 .form-sidebar {
 	.sidebar-section {
@@ -32,12 +29,60 @@
 				color: var(--text-light);
 			}
 		}
-		.modified-by,
-		.created-by {
-			.frappe-timestamp {
-				color: var(--text-light);
-				margin-top: 5px;
-				display: block;
+	}
+
+	.form-audit-info {
+		.audit-card {
+			border: 1px solid var(--border-color);
+			border-radius: var(--border-radius-md);
+			overflow: hidden;
+		}
+
+		.audit-row {
+			display: flex;
+			align-items: center;
+			gap: var(--margin-sm);
+			padding: var(--padding-sm) var(--padding-md);
+
+			& + .audit-row {
+				border-top: 1px solid var(--border-color);
+			}
+
+			.audit-icon-badge {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 32px;
+				height: 32px;
+				flex-shrink: 0;
+				border-radius: var(--border-radius-md);
+				background-color: var(--control-bg);
+
+				.icon {
+					margin: 0;
+					stroke: var(--text-light);
+				}
+			}
+
+			.audit-text {
+				display: flex;
+				flex-direction: column;
+				gap: 2px;
+				min-width: 0;
+				flex: 1;
+
+				.audit-label {
+					color: var(--text-light);
+				}
+
+				.audit-user {
+					font-weight: var(--weight-medium);
+					color: var(--heading-color);
+				}
+
+				.audit-timestamp {
+					color: var(--text-light);
+				}
 			}
 		}
 	}
@@ -285,15 +330,6 @@ body[data-route^="Form"] {
 		display: none !important;
 	}
 
-	.sidebar-menu > li > a {
-		display: inline-block;
-		&:hover,
-		&:focus,
-		&:active {
-			@extend .underline-hover !optional;
-		}
-	}
-
 	.sidebar-label {
 		font-weight: var(--weight-medium);
 		color: var(--heading-color);
@@ -313,13 +349,10 @@ body[data-route^="Form"] {
 	}
 
 	.form-sidebar {
-		.modified-by,
-		.created-by,
-		.pageview-count {
+		.form-audit-info {
 			@include get_textstyle("sm", "regular");
 		}
 
-		.modified-by,
 		.pageview-count {
 			margin-bottom: var(--margin-md);
 		}

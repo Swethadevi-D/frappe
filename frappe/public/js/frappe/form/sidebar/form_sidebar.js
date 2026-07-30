@@ -4,7 +4,7 @@ import "./share";
 import "./document_follow";
 import "./user_image";
 import "./form_sidebar_users";
-import { get_user_link, get_user_message } from "../footer/version_timeline_content_builder";
+import { get_user_link } from "../footer/version_timeline_content_builder";
 
 frappe.ui.form.Sidebar = class {
 	constructor(opts) {
@@ -153,28 +153,53 @@ frappe.ui.form.Sidebar = class {
 	}
 
 	refresh_creation_modified() {
-		this.sidebar
-			.find(".modified-by")
-			.html(
-				get_user_message(
-					this.frm.doc.modified_by,
-					__("Last Edited by You", null),
-					__("Last Edited by {0}", [get_user_link(this.frm.doc.modified_by)])
-				) +
-					" <br> " +
-					comment_when(this.frm.doc.modified)
-			);
-		this.sidebar
-			.find(".created-by")
-			.html(
-				get_user_message(
-					this.frm.doc.owner,
-					__("Created By You", null),
-					__("Created By {0}", [get_user_link(this.frm.doc.owner)])
-				) +
-					" <br> " +
-					comment_when(this.frm.doc.creation)
-			);
+		this.sidebar.find(".modified-by").html(
+			this.get_audit_row_html({
+				icon: "pencil",
+				label: __("Last edited by"),
+				user: this.frm.doc.modified_by,
+				timestamp: this.frm.doc.modified,
+			})
+		);
+		this.sidebar.find(".created-by").html(
+			this.get_audit_row_html({
+				icon: "plus",
+				label: __("Created by"),
+				user: this.frm.doc.owner,
+				timestamp: this.frm.doc.creation,
+			})
+		);
+	}
+
+	get_audit_row_html({ icon, label, user, timestamp }) {
+		const user_display = frappe.utils.is_current_user(user) ? __("You") : get_user_link(user);
+		return `
+			<span class="audit-icon-badge">${frappe.utils.icon(icon, "sm")}</span>
+			<span class="audit-text">
+				<span class="audit-line ellipsis">
+					<span class="audit-label">${label}</span>
+					<span class="audit-user">${user_display}</span>
+				</span>
+				<span class="audit-timestamp">${this.format_audit_timestamp(timestamp)}</span>
+			</span>
+		`;
+	}
+
+	format_audit_timestamp(datetime) {
+		if (!datetime) return "";
+		const system_dt = moment.tz(
+			datetime,
+			frappe.defaultDatetimeFormat,
+			frappe.boot.time_zone.system
+		);
+		const user_dt = system_dt.clone().tz(frappe.boot.time_zone.user);
+		const date_fmt = frappe.datetime.get_user_date_fmt().toUpperCase();
+		return user_dt.calendar(null, {
+			sameDay: "[Today], h:mm A",
+			lastDay: "[Yesterday], h:mm A",
+			lastWeek: `${date_fmt}, h:mm A`,
+			sameElse: `${date_fmt}, h:mm A`,
+		});
 	}
 
 	show_auto_repeat_status() {
